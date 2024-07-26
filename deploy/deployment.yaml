@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: vipbind
+  name: vipbind
+  namespace: cloudplus
+spec:
+  selector:
+    matchLabels:
+      app: vipbind
+  template:
+    metadata:
+      labels:
+        app: vipbind
+    spec:
+      hostNetwork: true
+      containers:
+        - name: vipbind
+          image: vipbind:v1
+          securityContext:
+            allowPrivilegeEscalation: true
+            capabilities:
+              add:
+                - SYS_TIME
+            privileged: true
+            runAsUser: 0
+          volumeMounts:
+            - mountPath: /root/
+              name: root
+            - name: vipconfigmap
+              mountPath: /etc/conf/app.ini
+              subPath: app.ini
+
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        kubernetes.io/role: "master"
+      restartPolicy: Always
+      volumes:
+        - hostPath:
+            path: /root/
+            type: ""
+          name: root
+        - name: vipconfigmap
+          configMap:
+            name: vipconfigmap
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vipconfigmap
+  namespace: cloudplus
+data:
+  app.ini: |
+    [k8s]
+    ip       = 172.18.70.241
+    port     = 6443
+
+    [vip]
+    vip      = 172.18.70.241
